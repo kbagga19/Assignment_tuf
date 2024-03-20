@@ -10,7 +10,7 @@ const { promisify } = require('util');
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: 'Baggaji19@',
+    password: '****',
     database: 'striver'
 });
 
