@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const DisplayPage = () => {
     const [submissions, setSubmissions] = useState([]);
-    const [output, setOutput] = useState('');
+    const [outputMap, setOutputMap] = useState({});
     
     useEffect(() => {
         fetchSubmissions();
@@ -20,18 +20,20 @@ const DisplayPage = () => {
 
     const displayOutput = async (submission) => {
         try {
-            const { language, code, stdin } = submission;
+            const { username, language, code, stdin } = submission;
             const executeResponse = await axios.post('http://localhost:8080/output', {
                 language,
                 code,
                 stdin
             });
-            setOutput(executeResponse.data.stdout);
+            const stdout = executeResponse.data.stdout;
+            setOutputMap((prevStdoutMap) => ({ ...prevStdoutMap, [username]: stdout }));
+            
         } catch (err) {
             console.error('Error executing code:', err);
         }
     };
-
+    console.log(submissions.output)
     return (
         <div className="table-container">
         <h1>Submitted Code Snippets</h1>
@@ -54,7 +56,7 @@ const DisplayPage = () => {
                     <td>{submission.stdin}</td>
                     <td>{submission.code.slice(0, 100)}</td>
                     <td>{new Date(submission.timestamp).toLocaleString()}</td>
-                    <td>{output}</td>    
+                    <td>{outputMap[submission.username] || ''}</td>    
                     <td style={{borderBottom: 'none'}}>
                         <button className='execute-btn' onClick={() => displayOutput(submission)}>Execute</button>
                     </td>

@@ -43,17 +43,16 @@ app.post('/submit', async (req, res) => {
     const query = 'INSERT INTO submissions (username, language, stdin, code, timestamp) VALUES (?, ?, ?, ?, ?)';
     connection.query(query, [username, language, stdin, code, timestamp], (err, result) => {
         if (err) {
-        console.error(err);
-        res.status(500).send('Error submitting code');
+            console.error(err);
+            return res.status(500).send('Error submitting code');
         } else {
-        res.status(200).send('Code submitted successfully');
+            res.status(200).send('Code submitted successfully');
         }
     });
     
     //Save in redis cache
     const submissionData = JSON.stringify({ username, language, stdin, code, timestamp });
-    redisSetAsync(result.insertId, submissionData);
-    res.status(200).json({ message: 'Code submitted successfully' });
+    redisSetAsync(username, submissionData);
 });
 
 //Fetch submissions
@@ -122,22 +121,25 @@ app.post('/output', async (req, res) => {
                 'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
             }
         };
-        try {
-            const outputResponse = await axios.request(outputOptions);
-            if (outputResponse.data.stdout != null) {
-                const stdout = Buffer.from(outputResponse.data.stdout, 'base64').toString();
-                res.status(200).json({ stdout });
+        try { 
+            while (true) {
+                const outputResponse = await axios.request(outputOptions);
+                if (outputResponse.data.status.id <= 2) { // Status 2 means processing
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before polling again
+                } else {
+                    const stdout = Buffer.from(outputResponse.data.stdout, 'base64').toString();
+                    res.status(200).json({ stdout });
+                }
             }
         } catch (error) {
             console.log(error)
         }
     
     } catch (error) {
-        console.error(error);
         res.status(500).json({ error: 'Error executing code' });
     }
 });
-  
+
 // Get language ID for Judge0 API getLanguages
 function getLanguageId(language) {
     switch (language) {
